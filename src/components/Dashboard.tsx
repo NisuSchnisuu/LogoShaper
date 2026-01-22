@@ -6,7 +6,7 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ onOpenApp }) => {
     return (
-        <div className="relative flex h-full w-full max-w-md flex-col overflow-hidden bg-background-dark">
+        <div className="relative flex h-full min-h-screen w-full flex-col overflow-hidden bg-background-dark md:max-w-7xl md:mx-auto md:border-x md:border-white/5">
             {/* Background Glow */}
             <div className="absolute -top-32 -right-32 w-80 h-80 bg-primary/20 rounded-full blur-[100px] pointer-events-none"></div>
 
@@ -97,7 +97,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenApp }) => {
             </main>
 
             {/* Navigator */}
-            <nav className="fixed bottom-0 w-full max-w-md bg-surface-dark/90 backdrop-blur-md border-t border-gray-800/50 pb-safe pt-2 px-6 z-50 pb-6">
+            <nav className="fixed bottom-0 w-full bg-surface-dark/90 backdrop-blur-md border-t border-gray-800/50 pb-safe pt-2 px-6 z-50 pb-6 md:absolute md:max-w-full">
                 <ul className="flex justify-between items-center">
                     <li>
                         <button className="flex flex-col items-center gap-1 p-2 text-primary">

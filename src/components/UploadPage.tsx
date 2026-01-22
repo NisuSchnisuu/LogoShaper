@@ -34,7 +34,7 @@ export const UploadPage: React.FC<UploadPageProps> = ({ onBack, onFileSelect }) 
     };
 
     return (
-        <div className="relative flex h-full w-full max-w-md flex-col overflow-x-hidden p-6 pb-12 gap-8 bg-background-dark min-h-screen">
+        <div className="relative flex h-full w-full flex-col overflow-x-hidden p-6 pb-12 gap-8 bg-background-dark min-h-screen md:max-w-7xl md:mx-auto">
             {/* Header */}
             <header className="flex items-center justify-between py-2">
                 <div className="flex items-center gap-2.5">

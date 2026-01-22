@@ -103,102 +103,116 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({ imageSrc, on
     const getExtension = () => format.split('/')[1];
 
     return (
-        <div className="flex flex-col h-screen overflow-hidden bg-background-dark text-white font-display max-w-md mx-auto relative border-x border-white/5">
-            <header className="flex items-center justify-between px-4 py-3 z-30 relative bg-background-dark/80 backdrop-blur-xl border-b border-white/5">
+        <div className="flex flex-col h-screen overflow-hidden bg-background-dark text-white font-display w-full md:max-w-7xl md:mx-auto">
+            <header className="flex-none flex items-center justify-between px-6 py-4 z-30 bg-background-dark/80 backdrop-blur-xl border-b border-white/5">
                 <button
                     onClick={onBack}
                     className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-colors text-white cursor-pointer"
                 >
                     <span className="material-symbols-outlined text-[20px]">arrow_back_ios_new</span>
                 </button>
-                <h2 className="text-sm font-semibold uppercase tracking-widest flex-1 text-center pr-10 text-white/90">Fertigstellen</h2>
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-center pr-10 text-white/90">Fertigstellen</h2>
             </header>
 
-            <main className="flex-1 overflow-y-auto px-6 py-8 flex flex-col items-center gap-8">
-                {/* Preview */}
-                <div className="relative w-64 h-64 bg-[#1c1c1f] rounded-3xl border border-white/10 shadow-2xl flex items-center justify-center overflow-hidden">
-                    <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #fff 0.5px, transparent 0.5px)', backgroundSize: '12px 12px' }}></div>
-                    <img src={imageSrc} alt="Final Logo" className="w-[80%] h-[80%] object-contain drop-shadow-lg" />
-                </div>
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
 
-                {/* File Name Input */}
-                <div className="w-full">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Dateiname</label>
-                    <div className="relative">
+                {/* Preview Area (Left) */}
+                <main className="flex-1 flex items-center justify-center bg-background-dark overflow-hidden relative">
+                    <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'linear-gradient(45deg, #222 25%, transparent 25%), linear-gradient(-45deg, #222 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #222 75%), linear-gradient(-45deg, transparent 75%, #222 75%)', backgroundSize: '20px 20px', backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px' }}></div>
+
+                    <div className="relative w-64 h-64 md:w-96 md:h-96 bg-[#1c1c1f] rounded-3xl border border-white/10 shadow-2xl flex items-center justify-center overflow-hidden z-10 transition-all duration-300">
+                        <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #fff 0.5px, transparent 0.5px)', backgroundSize: '12px 12px' }}></div>
+                        <img src={imageSrc} alt="Final Logo" className="w-[80%] h-[80%] object-contain drop-shadow-lg" />
+                    </div>
+                </main>
+
+                {/* Controls (Right Sidebar) */}
+                <aside className="
+                    flex-none bg-[#121214] border-t border-white/5 pt-4 pb-8 flex flex-col gap-6 px-6 z-20
+                    md:w-96 md:h-full md:border-l md:border-t-0 md:pt-8 md:justify-start md:overflow-y-auto
+                ">
+
+                    {/* File Name Input */}
+                    <div className="w-full">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Dateiname</label>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={fileName}
+                                onChange={(e) => setFileName(e.target.value)}
+                                className="w-full bg-[#1c1c1f] border border-white/10 rounded-xl py-4 px-4 text-white focus:outline-none focus:border-primary transition-colors"
+                            />
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">.{getExtension()}</span>
+                        </div>
+                    </div>
+
+                    {/* Format Selection */}
+                    <div className="w-full">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Format</label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {(['image/png', 'image/jpeg', 'image/webp'] as const).map((f) => (
+                                <button
+                                    key={f}
+                                    onClick={() => setFormat(f)}
+                                    className={`h-10 rounded-lg text-xs font-bold uppercase transition-all border ${format === f
+                                            ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(99,102,241,0.2)]'
+                                            : 'bg-[#1c1c1f] border-white/5 text-gray-400 hover:bg-white/5'
+                                        }`}
+                                >
+                                    {f.split('/')[1]}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Compression */}
+                    <div className="w-full space-y-4 p-4 rounded-xl bg-[#1c1c1f]/50 border border-white/5">
+                        <div className="flex justify-between items-center">
+                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Kompression</label>
+                            <span className="text-primary text-xs font-mono font-bold">{Math.round(compressionQuality * 100)}% Quality</span>
+                        </div>
                         <input
-                            type="text"
-                            value={fileName}
-                            onChange={(e) => setFileName(e.target.value)}
-                            className="w-full bg-[#1c1c1f] border border-white/10 rounded-xl py-4 px-4 text-white focus:outline-none focus:border-primary transition-colors"
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={compressionQuality}
+                            onChange={(e) => setCompressionQuality(parseFloat(e.target.value))}
+                            className="w-full accent-primary h-1 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                            disabled={format === 'image/png'}
                         />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">.{getExtension()}</span>
+                        <div className="flex justify-between text-[10px] text-gray-500 font-mono">
+                            {format === 'image/png' ? (
+                                <span className="col-span-2 text-center w-full text-yellow-500/80">PNG unterstützt keine Kompressionsstufen</span>
+                            ) : (
+                                <>
+                                    <span>Est: <span className="text-white">{estimatedSize}</span></span>
+                                    {originalSize !== '0 KB' && <span>(Orig: {originalSize})</span>}
+                                </>
+                            )}
+                        </div>
                     </div>
-                </div>
 
-                {/* Format Selection */}
-                <div className="w-full">
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Format</label>
-                    <div className="grid grid-cols-3 gap-2">
-                        {(['image/png', 'image/jpeg', 'image/webp'] as const).map((f) => (
-                            <button
-                                key={f}
-                                onClick={() => setFormat(f)}
-                                className={`h-10 rounded-lg text-xs font-bold uppercase transition-all border ${format === f
-                                        ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(99,102,241,0.2)]'
-                                        : 'bg-[#1c1c1f] border-white/5 text-gray-400 hover:bg-white/5'
-                                    }`}
-                            >
-                                {f.split('/')[1]}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                    <div className="flex-1 md:hidden"></div>
 
-                {/* Compression */}
-                <div className="w-full space-y-4 p-4 rounded-xl bg-[#1c1c1f]/50 border border-white/5">
-                    <div className="flex justify-between items-center">
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Kompression</label>
-                        <span className="text-primary text-xs font-mono font-bold">{Math.round(compressionQuality * 100)}% Quality</span>
+                    <div className="space-y-3 pb-safe mt-6 md:mt-auto">
+                        <button
+                            onClick={handleDownloadNormal}
+                            className="w-full flex items-center justify-center gap-3 h-14 rounded-2xl bg-white text-black text-sm font-bold uppercase tracking-widest shadow-xl hover:bg-gray-200 transition-colors cursor-pointer"
+                        >
+                            <span className="material-symbols-outlined">download</span>
+                            <span>Download ({getExtension().toUpperCase()})</span>
+                        </button>
+                        <button
+                            onClick={handleDownloadAppSet}
+                            className="w-full flex items-center justify-center gap-3 h-14 rounded-2xl bg-[#1c1c1f] text-white border border-white/10 text-sm font-bold uppercase tracking-widest hover:bg-white/5 transition-colors cursor-pointer"
+                        >
+                            <span className="material-symbols-outlined">layers</span>
+                            <span>Download App-Set</span>
+                        </button>
                     </div>
-                    <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.05"
-                        value={compressionQuality}
-                        onChange={(e) => setCompressionQuality(parseFloat(e.target.value))}
-                        className="w-full accent-primary h-1 bg-white/10 rounded-lg appearance-none cursor-pointer"
-                        disabled={format === 'image/png'}
-                    />
-                    <div className="flex justify-between text-[10px] text-gray-500 font-mono">
-                        {format === 'image/png' ? (
-                            <span className="col-span-2 text-center w-full text-yellow-500/80">PNG unterstützt keine Kompressionsstufen</span>
-                        ) : (
-                            <>
-                                <span>Est: <span className="text-white">{estimatedSize}</span></span>
-                                {originalSize !== '0 KB' && <span>(Orig: {originalSize})</span>}
-                            </>
-                        )}
-                    </div>
-                </div>
-            </main>
-
-            <footer className="p-6 bg-background-dark border-t border-white/5 space-y-3">
-                <button
-                    onClick={handleDownloadNormal}
-                    className="w-full flex items-center justify-center gap-3 h-14 rounded-2xl bg-white text-black text-sm font-bold uppercase tracking-widest shadow-xl hover:bg-gray-200 transition-colors cursor-pointer"
-                >
-                    <span className="material-symbols-outlined">download</span>
-                    <span>Download ({getExtension().toUpperCase()})</span>
-                </button>
-                <button
-                    onClick={handleDownloadAppSet}
-                    className="w-full flex items-center justify-center gap-3 h-14 rounded-2xl bg-[#1c1c1f] text-white border border-white/10 text-sm font-bold uppercase tracking-widest hover:bg-white/5 transition-colors cursor-pointer"
-                >
-                    <span className="material-symbols-outlined">layers</span>
-                    <span>Download App-Set</span>
-                </button>
-            </footer>
+                </aside>
+            </div>
         </div>
     );
 };

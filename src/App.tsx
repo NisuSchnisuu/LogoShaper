@@ -36,8 +36,8 @@ function App() {
   console.log('Current file:', file);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black">
-      {/* Centered mobile-first container */}
+    <div className="min-h-screen w-full bg-black text-white">
+      {/* Container managed by children */}
       {view === 'dashboard' ? (
         <Dashboard onOpenApp={() => setView('upload')} />
       ) : view === 'upload' ? (

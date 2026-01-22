@@ -20,7 +20,7 @@ export const ModeSelection: React.FC<ModeSelectionProps> = ({ file, onBack, onSe
     }, [file]);
 
     return (
-        <div className="relative flex min-h-screen w-full flex-col max-w-md mx-auto overflow-x-hidden bg-background-dark font-display">
+        <div className="relative flex min-h-screen w-full flex-col mx-auto overflow-x-hidden bg-background-dark font-display md:max-w-4xl md:justify-center">
             {/* Header */}
             <div className="flex items-center bg-background-dark/80 backdrop-blur-md p-4 pb-2 justify-between sticky top-0 z-10">
                 <button
@@ -58,8 +58,8 @@ export const ModeSelection: React.FC<ModeSelectionProps> = ({ file, onBack, onSe
             </div>
 
             {/* Mode Selection Grid */}
-            <div className="px-5 pb-8 flex-1">
-                <div className="grid grid-cols-2 gap-4 h-full items-stretch">
+            <div className="px-5 pb-8 flex-1 md:flex-initial md:w-full">
+                <div className="grid grid-cols-2 gap-4 h-full items-stretch md:grid-cols-2 md:gap-8">
                     {/* Magic Auto Card */}
                     <div
                         onClick={() => onSelectMode('auto')}
