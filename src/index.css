@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #6366f1;
+  --color-primary-dark: #4338ca;
+  --color-accent: #8b5cf6;
+  --color-background-dark: #0a0a0c;
+  --color-surface-dark: #16161a;
+  --color-surface-light: #23232a;
+  
+  --font-display: "Inter", sans-serif;
+  
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+}
+
+:root {
+  --glow-color: rgba(99, 102, 241, 0.15);
+  font-family: var(--font-display);
+  background-color: var(--color-background-dark);
+  color: white;
+}
+
+/* Custom Utilities based on reference styles */
+.card-glow {
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.08);
+}
+
+.logo-gradient {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+
+.text-gradient {
+  background: linear-gradient(to right, #ffffff 20%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Base styles cleanup */
+body {
+  margin: 0;
+  min-height: 100vh;
+}

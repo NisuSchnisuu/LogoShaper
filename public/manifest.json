@@ -1,0 +1,21 @@
+{
+    "name": "LogoShaper",
+    "short_name": "LogoShaper",
+    "description": "Create professional app icons in seconds.",
+    "theme_color": "#0a0a0c",
+    "background_color": "#0a0a0c",
+    "display": "standalone",
+    "start_url": ".",
+    "icons": [
+        {
+            "src": "logo-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "logo-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
