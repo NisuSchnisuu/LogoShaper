@@ -16,10 +16,15 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
     // Border State
     const [borderWidth, setBorderWidth] = useState<number>(0); // 0-50 px
     const [borderColor, setBorderColor] = useState<string>('#ffffff');
+    const [gradientColor2, setGradientColor2] = useState<string>('#000000'); // New: Second Color
 
     // Separation of Concerns: Fill vs Effects
-    type BorderFill = 'solid' | 'gradient-radial-out' | 'gradient-radial-in' | 'gradient-conic';
+    type BorderFill = 'solid' | 'gradient-linear' | 'gradient-radial-out' | 'gradient-radial-in' | 'gradient-conic';
     const [borderFill, setBorderFill] = useState<BorderFill>('solid');
+
+    // Gradient Direction for Radial/Linear
+    type RadialDirection = 'center' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+    const [radialDirection, setRadialDirection] = useState<RadialDirection>('center');
 
     const [isNeon, setIsNeon] = useState(false);
     const [neonIntensity, setNeonIntensity] = useState(50); // 0-100
@@ -27,17 +32,18 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
 
 
     const PRESETS = [
-        { name: 'Classic', width: 2, color: '#ffffff', fill: 'solid', neon: false, neonInt: 50, threeD: false },
-        { name: 'Neon Blue', width: 4, color: '#00ffff', fill: 'solid', neon: true, neonInt: 80, threeD: false },
-        { name: 'Gold 3D', width: 8, color: '#ffd700', fill: 'solid', neon: false, neonInt: 50, threeD: true },
-        { name: 'Rainbow', width: 6, color: '#ff0000', fill: 'gradient-conic', neon: false, neonInt: 50, threeD: false },
-        { name: 'Rain-Neon', width: 6, color: '#ff0000', fill: 'gradient-conic', neon: true, neonInt: 100, threeD: false }, // Combo demo
-        { name: 'Vignette', width: 10, color: '#000000', fill: 'gradient-radial-out', neon: false, neonInt: 50, threeD: false },
+        { name: 'Classic', width: 2, color: '#ffffff', color2: '#000000', fill: 'solid', neon: false, neonInt: 50, threeD: false },
+        { name: 'Neon Blue', width: 4, color: '#00ffff', color2: '#000000', fill: 'solid', neon: true, neonInt: 80, threeD: false },
+        { name: 'Gold 3D', width: 8, color: '#ffd700', color2: '#b8860b', fill: 'solid', neon: false, neonInt: 50, threeD: true },
+        { name: 'Rainbow', width: 6, color: '#ff0000', color2: '#000000', fill: 'gradient-conic', neon: false, neonInt: 50, threeD: false },
+        { name: 'Rain-Neon', width: 6, color: '#ff0000', color2: '#000000', fill: 'gradient-conic', neon: true, neonInt: 100, threeD: false }, // Combo demo
+        { name: 'Vignette', width: 10, color: '#000000', color2: 'transparent', fill: 'gradient-radial-out', neon: false, neonInt: 50, threeD: false },
     ] as const;
 
     const applyPreset = (preset: any) => {
         setBorderWidth(preset.width);
         setBorderColor(preset.color);
+        if (preset.color2) setGradientColor2(preset.color2);
         setBorderFill(preset.fill);
         setIsNeon(preset.neon);
         if (preset.neonInt) setNeonIntensity(preset.neonInt);
@@ -45,9 +51,9 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
     };
 
     // Helper: Generate consistent Gradient CSS
-    const getGradientCSS = (fill: BorderFill, color: string) => {
+    const getGradientCSS = (fill: BorderFill, c1: string, c2: string, direction: RadialDirection) => {
         if (fill === 'gradient-conic') {
-            if (color.toLowerCase() === '#ff0000') {
+            if (c1.toLowerCase() === '#ff0000' && c2.toLowerCase() === '#000000') {
                 // Rainbow: Use explicit stops for smooth loop
                 return `conic-gradient(from 0deg, 
                     #ff0000 0%, 
@@ -59,11 +65,24 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
                     #ee82ee 85.7%, 
                     #ff0000 100%)`;
             }
-            // Custom Color Conic: Color -> White -> Color
-            return `conic-gradient(from 0deg, ${color} 0%, #ffffff 50%, ${color} 100%)`;
+            // Custom Color Conic: Color -> Color2 -> Color
+            return `conic-gradient(from 0deg, ${c1} 0%, ${c2} 50%, ${c1} 100%)`;
         }
-        if (fill === 'gradient-radial-out') return `radial-gradient(circle, ${color} 60%, transparent 100%)`;
-        if (fill === 'gradient-radial-in') return `radial-gradient(circle, transparent 60%, ${color} 100%)`;
+
+        // Map Direction to CSS position
+        let pos = 'center';
+        if (direction === 'top-left') pos = 'top left';
+        if (direction === 'top-right') pos = 'top right';
+        if (direction === 'bottom-left') pos = 'bottom left';
+        if (direction === 'bottom-right') pos = 'bottom right';
+
+        if (fill === 'gradient-radial-out') return `radial-gradient(circle at ${pos}, ${c1} 0%, ${c2} 100%)`;
+        if (fill === 'gradient-radial-in') return `radial-gradient(circle at ${pos}, ${c2} 0%, ${c1} 100%)`;
+        // Added Linear
+        if (fill === 'gradient-linear') return `linear-gradient(to bottom right, ${c1}, ${c2})`; // Simplified linear direction for now or reuse radial direction?
+        // User asked for "Kreisverlauf auswählen kann, in welche richtung" (Radial direction).
+        // For linear, usually angle. Keeping it simple or default.
+
         return undefined;
     };
 
@@ -121,19 +140,28 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
     // For this prototype, I will use a ref to store the rendered clientWidth.
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Updated Export with correct Scaling
+    // Updated Export with correct Scaling & Clipping Fix
     const handleDownload = () => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        canvas.width = canvasSize;
-        canvas.height = canvasSize;
+        // Add padding for external glow/shadows
+        const padding = 100;
+        const totalSize = canvasSize + (padding * 2);
+
+        canvas.width = totalSize;
+        canvas.height = totalSize;
 
         const img = new Image();
         img.src = previewUrl;
         img.onload = () => {
-            ctx.clearRect(0, 0, canvasSize, canvasSize);
+            ctx.clearRect(0, 0, totalSize, totalSize);
+
+            // Move origin to account for padding
+            ctx.translate(padding, padding);
+
+            // 1. Draw Image (Clipped)
             ctx.save();
             ctx.beginPath();
             const r = canvasSize * (radius / 100);
@@ -162,7 +190,9 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
 
             ctx.drawImage(img, x, y, drawWidth, drawHeight);
 
-            // Draw Border (after image)
+            ctx.restore(); // Removes clip!
+
+            // 2. Draw Border & Effects (Unclipped)
             if (borderWidth > 0) {
                 // Calculate scaled border width
                 const scaledBorderWidth = borderWidth * ratio;
@@ -173,15 +203,31 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
                 const cx = canvasSize / 2;
                 const cy = canvasSize / 2;
 
-                if (borderFill === 'gradient-radial-out') {
-                    const g = ctx.createRadialGradient(cx, cy, canvasSize / 2 - scaledBorderWidth, cx, cy, canvasSize / 2);
-                    g.addColorStop(0, borderColor);
-                    g.addColorStop(1, 'rgba(0,0,0,0)');
+                if (borderFill === 'gradient-radial-out' || borderFill === 'gradient-radial-in') {
+                    // Calculate center based on direction
+                    let gx = cx;
+                    let gy = cy;
+                    if (radialDirection.includes('left')) gx = 0;
+                    if (radialDirection.includes('right')) gx = canvasSize;
+                    if (radialDirection.includes('top')) gy = 0;
+                    if (radialDirection.includes('bottom')) gy = canvasSize;
+
+                    // Radius should cover corners
+                    const gradRadius = Math.sqrt(Math.pow(canvasSize, 2) + Math.pow(canvasSize, 2));
+
+                    const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, gradRadius);
+                    if (borderFill === 'gradient-radial-out') {
+                        g.addColorStop(0, borderColor);
+                        g.addColorStop(1, gradientColor2);
+                    } else {
+                        g.addColorStop(0, gradientColor2);
+                        g.addColorStop(1, borderColor);
+                    }
                     strokeStyle = g;
-                } else if (borderFill === 'gradient-radial-in') {
-                    const g = ctx.createRadialGradient(cx, cy, canvasSize / 2 - scaledBorderWidth, cx, cy, canvasSize / 2);
-                    g.addColorStop(0, 'rgba(0,0,0,0)');
-                    g.addColorStop(1, borderColor);
+                } else if (borderFill === 'gradient-linear') {
+                    const g = ctx.createLinearGradient(0, 0, canvasSize, canvasSize);
+                    g.addColorStop(0, borderColor);
+                    g.addColorStop(1, gradientColor2);
                     strokeStyle = g;
                 } else if (borderFill === 'gradient-conic') {
                     try {
@@ -197,11 +243,12 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
                             g.addColorStop(1, "#ff0000");
                         } else {
                             g.addColorStop(0, borderColor);
-                            g.addColorStop(0.5, 'white');
+                            g.addColorStop(0.5, gradientColor2);
                             g.addColorStop(1, borderColor);
                         }
                         strokeStyle = g;
                     } catch (e) {
+                        // Fallback
                         strokeStyle = borderColor;
                     }
                 }
@@ -212,33 +259,28 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
                 ctx.beginPath();
                 // To draw the stroke *inside* the clipped area, we need to define a path that is
                 // inset by half the line width. The radius also needs to be adjusted.
-                const halfBorder = scaledBorderWidth / 2;
-                const borderRectX = halfBorder;
-                const borderRectY = halfBorder;
-                const borderRectWidth = canvasSize - scaledBorderWidth;
-                const borderRectHeight = canvasSize - scaledBorderWidth;
-                const borderRectRadius = Math.max(0, r - halfBorder);
-                ctx.roundRect(borderRectX, borderRectY, borderRectWidth, borderRectHeight, borderRectRadius);
+                // WAIT: If we draw *on* the line (stroke), half is inside, half is outside.
+                // The Image is clipped to 'r'.
+                // Ideally, we want the border to sit perfectly on top.
+                // Canvas stroking is centered on the path.
+                ctx.roundRect(0, 0, canvasSize, canvasSize, r);
+
 
                 // 3. Apply Neon Effect
                 if (isNeon) {
+                    const blur = (20 * ratio) * (neonIntensity / 50);
+
                     if (borderFill.startsWith('gradient')) {
-                        // Gradient Neon: Draw a blurred copy of the stroke BEHIND the main stroke
+                        // For gradient neon, we need to stroke with blur first (glow)
                         ctx.save();
-                        const blur = (15 * ratio) * (neonIntensity / 50);
                         ctx.filter = `blur(${blur}px)`;
-                        ctx.strokeStyle = strokeStyle;
+                        ctx.globalCompositeOperation = 'destination-over'; // Draw behind
                         ctx.lineWidth = scaledBorderWidth;
+                        ctx.strokeStyle = strokeStyle; // Use same gradient
                         ctx.stroke();
                         ctx.restore();
-
-                        // No standard shadow for main stroke
-                        ctx.shadowBlur = 0;
-                        ctx.shadowColor = 'transparent';
                     } else {
-                        // Solid Neon: Use standard shadow on the main stroke
                         ctx.shadowColor = borderColor;
-                        const blur = (20 * ratio) * (neonIntensity / 50);
                         ctx.shadowBlur = blur;
                     }
                 } else {
@@ -256,30 +298,24 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
                     ctx.shadowColor = 'transparent';
 
                     // Highlight (Top-Left)
-                    ctx.shadowColor = 'rgba(255,255,255,0.7)';
-                    ctx.shadowBlur = 2 * ratio;
-                    ctx.shadowOffsetX = -2 * ratio;
-                    ctx.shadowOffsetY = -2 * ratio;
-                    ctx.stroke(); // Re-stroke with shadow only (source-atop not strictly needed if we just layer it)
-                    // Actually stroking again draws the line again. 
-                    // We want just the shadow? 
-                    // Easier: Draw semi-transparent white stroke with offset? No, that shifts the border.
-                    // The shadow approach works if we stroke.
+                    // Simplified Bevel using offset strokes for robustness
+                    ctx.save();
+                    // We can't clip to stroke easily.
+                    // Just draw thinner strokes offset.
+                    ctx.lineWidth = scaledBorderWidth / 4;
 
-                    // Shadow (Bottom-Right)
-                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                    ctx.shadowOffsetX = 2 * ratio;
-                    ctx.shadowOffsetY = 2 * ratio;
+                    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+                    ctx.translate(-1 * ratio, -1 * ratio);
                     ctx.stroke();
 
-                    // Reset for safety
-                    ctx.shadowColor = 'transparent';
-                    ctx.shadowOffsetX = 0;
-                    ctx.shadowOffsetY = 0;
+                    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+                    ctx.translate(2 * ratio, 2 * ratio);
+                    ctx.stroke();
+
+                    ctx.restore();
                 }
             }
 
-            ctx.restore();
             onConfirm(canvas.toDataURL('image/png'));
         };
     };
@@ -308,7 +344,11 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
 
                 {/* Canvas / Main Area */}
-                <main className="relative flex-1 w-full bg-background-dark overflow-hidden flex items-center justify-center select-none">
+                <main className="relative flex-1 w-full bg-background-dark flex items-center justify-center select-none overflow-hidden">
+                    {/* Note: overflow-hidden is here. If we want NEON to spill out VISUALLY in the editor, we might need to remove it OR make the internal container smaller. 
+                         For now, the user's primary concern might be the export or the visual containment. 
+                         Let's keep it overflow-hidden for the UI layout but ensure the padding inside allows glow.
+                     */}
 
                     {/* Dark/Light Checkerboard for transparency indication behind everything */}
                     <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'linear-gradient(45deg, #222 25%, transparent 25%), linear-gradient(-45deg, #222 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #222 75%), linear-gradient(-45deg, transparent 75%, #222 75%)', backgroundSize: '20px 20px', backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px' }}></div>
@@ -322,18 +362,11 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
                     )}
 
                     {/* The Editing Canvas Container */}
-                    {/* The Editing Canvas Container - Refactored for Zoom/Border */}
                     <div
                         ref={containerRef}
                         className={`relative z-10 w-72 h-72 md:w-96 md:h-96 cursor-move touch-none ${isDragging ? 'cursor-grabbing' : ''}`}
                         style={{
-                            // We use padding to simulate the border "space" if needed, or better:
-                            // We construct the Visual Stack:
-                            // 1. Container (defines size & radius)
-                            // 2. Border Layer (Absolute, simulates the border visual)
-                            // 3. Image Layer (Absolute, inside, masked)
                             borderRadius: `${radius}%`,
-                            boxShadow: '0 0 0 9999px rgba(10,10,12, 0.95)',
                             transform: 'translateZ(0)',
                         }}
                         onMouseDown={handleMouseDown}
@@ -341,7 +374,24 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
                         onMouseUp={handleMouseUp}
                         onMouseLeave={handleMouseLeave}
                     >
-                        {/* 1. Border Layer */}
+                        {/* 0. Image Layer (Clipped) */}
+                        <div
+                            className="absolute inset-0 overflow-hidden pointer-events-none z-0"
+                            style={{ borderRadius: `${radius}%` }}
+                        >
+                            {previewUrl && (
+                                <div
+                                    className="absolute inset-0 bg-center bg-no-repeat will-change-transform"
+                                    style={{
+                                        backgroundImage: `url('${previewUrl}')`,
+                                        backgroundSize: `${scale}%`,
+                                        backgroundPosition: `calc(50% + ${offset.x}px) calc(50% + ${offset.y}px)`
+                                    }}
+                                />
+                            )}
+                        </div>
+
+                        {/* 1. Border Layer (Unclipped & Visuals) */}
                         <div
                             className="absolute inset-0 pointer-events-none z-20"
                             style={{
@@ -356,7 +406,7 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
                                 border: borderFill === 'solid' ? `${borderWidth}px solid ${borderColor}` : 'none',
 
                                 // BACKGROUND (Gradient Fill)
-                                background: getGradientCSS(borderFill, borderColor),
+                                background: getGradientCSS(borderFill, borderColor, gradientColor2, radialDirection),
 
                                 // NEON & 3D (Moved to separate layer)
                                 // boxShadow: [ ... ].filter(Boolean).join(', '),
@@ -391,7 +441,7 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
                                 className="absolute inset-0 pointer-events-none z-10"
                                 style={{
                                     borderRadius: `${radius}%`,
-                                    background: getGradientCSS(borderFill, borderColor),
+                                    background: getGradientCSS(borderFill, borderColor, gradientColor2, radialDirection),
                                     filter: `blur(${15 * (neonIntensity / 50)}px)`,
                                     // MASKING: Same trick as border to make it hollow
                                     WebkitMask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
@@ -406,7 +456,7 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
 
                         {/* Optional Grid Overlay inside canvas area only */}
                         {isGridActive && (
-                            <div className="absolute inset-0 z-20 pointer-events-none grid grid-cols-3 grid-rows-3 opacity-30">
+                            <div className="absolute inset-0 z-20 pointer-events-none grid grid-cols-3 grid-rows-3 opacity-30" style={{ borderRadius: `${radius}%`, overflow: 'hidden' }}>
                                 <div className="border-r border-b border-white"></div>
                                 <div className="border-r border-b border-white"></div>
                                 <div className="border-b border-white"></div>
@@ -425,29 +475,6 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
                                 <div className="absolute top-1/2 left-0 w-full h-px bg-primary/50 z-20 pointer-events-none"></div>
                                 <div className="absolute left-1/2 top-0 h-full w-px bg-primary/50 z-20 pointer-events-none"></div>
                             </>
-                        )}
-
-
-                        {/* Image Layer - FIX FOR ZOOM CLIPPING */}
-                        {/* 
-                            Problem: transform translates the element. If the element is 100% size, moving it moves it out of view.
-                            Solution: Use background-position on a full-size element.
-                            Calculations:
-                            Center is 50% 50%.
-                            Offset is in pixels from center.
-                            Note: background-position: center = 50% 50%.
-                            If we want to move 10px right, it's calc(50% + 10px).
-                        */}
-                        {previewUrl && (
-                            <div
-                                className="absolute inset-0 z-0 bg-center bg-no-repeat pointer-events-none will-change-transform"
-                                style={{
-                                    borderRadius: `${radius}%`, // Clip image at radius
-                                    backgroundImage: `url('${previewUrl}')`,
-                                    backgroundSize: `${scale}%`,
-                                    backgroundPosition: `calc(50% + ${offset.x}px) calc(50% + ${offset.y}px)`
-                                }}
-                            />
                         )}
                     </div>
 
@@ -549,31 +576,66 @@ export const ManualPrecisionEditor: React.FC<ManualPrecisionEditorProps> = ({ fi
                         </div>
 
                         {/* Color & Effect */}
-                        <div className="flex items-center gap-4">
-                            <div className="flex-1">
-                                <label className="text-[9px] text-gray-500 uppercase tracking-wider mb-1 block">Farbe</label>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="color"
-                                        value={borderColor}
-                                        onChange={(e) => setBorderColor(e.target.value)}
-                                        className="h-8 w-12 bg-transparent border border-white/10 rounded cursor-pointer p-0.5"
-                                    />
-                                    <span className="text-[10px] text-gray-400 font-mono uppercase">{borderColor}</span>
+                        <div className="space-y-3">
+                            {/* Row 1: Fill Type & Direction */}
+                            <div className="flex items-center gap-3">
+                                <div className="flex-1">
+                                    <label className="text-[9px] text-gray-500 uppercase tracking-wider mb-1 block">Füllung</label>
+                                    <select
+                                        value={borderFill}
+                                        onChange={(e) => setBorderFill(e.target.value as any)}
+                                        className="w-full bg-[#1c1c1f] text-xs text-white border border-white/10 rounded h-8 px-2 outline-none focus:border-primary"
+                                    >
+                                        <option value="solid">Solid</option>
+                                        <option value="gradient-linear">Verlauf</option>
+                                        <option value="gradient-radial-out">Radial</option>
+                                        <option value="gradient-conic">Kreis</option>
+                                    </select>
                                 </div>
+                                {(borderFill === 'gradient-radial-out' || borderFill === 'gradient-radial-in') && (
+                                    <div className="flex-1">
+                                        <label className="text-[9px] text-gray-500 uppercase tracking-wider mb-1 block">Richtung</label>
+                                        <select
+                                            value={radialDirection}
+                                            onChange={(e) => setRadialDirection(e.target.value as any)}
+                                            className="w-full bg-[#1c1c1f] text-xs text-white border border-white/10 rounded h-8 px-2 outline-none focus:border-primary"
+                                        >
+                                            <option value="center">Mitte</option>
+                                            <option value="top-left">O-L</option>
+                                            <option value="top-right">O-R</option>
+                                            <option value="bottom-left">U-L</option>
+                                            <option value="bottom-right">U-R</option>
+                                        </select>
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex-1">
-                                <label className="text-[9px] text-gray-500 uppercase tracking-wider mb-1 block">Füllung</label>
-                                <select
-                                    value={borderFill}
-                                    onChange={(e) => setBorderFill(e.target.value as any)}
-                                    className="w-full bg-[#1c1c1f] text-xs text-white border border-white/10 rounded h-8 px-2 outline-none focus:border-primary"
-                                >
-                                    <option value="solid">Solid</option>
-                                    <option value="gradient-radial-out">Verlauf (Out)</option>
-                                    <option value="gradient-radial-in">Verlauf (In)</option>
-                                    <option value="gradient-conic">Kreisverlauf</option>
-                                </select>
+
+                            {/* Row 2: Colors */}
+                            <div className="flex items-center gap-4">
+                                <div className="flex-1">
+                                    <label className="text-[9px] text-gray-500 uppercase tracking-wider mb-1 block">Farbe 1</label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="color"
+                                            value={borderColor}
+                                            onChange={(e) => setBorderColor(e.target.value)}
+                                            className="h-8 w-full bg-transparent border border-white/10 rounded cursor-pointer p-0.5"
+                                        />
+                                    </div>
+                                </div>
+                                {borderFill.startsWith('gradient') && (
+                                    <div className="flex-1">
+                                        <label className="text-[9px] text-gray-500 uppercase tracking-wider mb-1 block">Farbe 2</label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="color"
+                                                value={gradientColor2}
+                                                onChange={(e) => setGradientColor2(e.target.value)}
+                                                className="h-8 w-full bg-transparent border border-white/10 rounded cursor-pointer p-0.5"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
