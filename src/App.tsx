@@ -5,21 +5,66 @@ import { ModeSelection } from './components/ModeSelection'
 import { AutoModeEditor } from './components/AutoModeEditor'
 import { ManualPrecisionEditor } from './components/ManualPrecisionEditor'
 import { CompletionScreen } from './components/CompletionScreen'
+import { WorkflowSelection } from './components/WorkflowSelection'
+import { AndroidUploadPage } from './components/AndroidUploadPage'
+import { AndroidEditor } from './components/AndroidEditor'
+import { AndroidCompletionScreen } from './components/AndroidCompletionScreen'
 
-type View = 'dashboard' | 'upload' | 'mode-selection' | 'auto-editor' | 'manual-editor' | 'completion'
+// Workflow mode types
+type WorkflowMode = 'standard' | 'android'
+
+// Android project types
+interface AndroidBackground {
+  type: 'color' | 'image'
+  value: string // hex color or object URL
+  file?: File   // only for image type
+}
+
+interface AndroidForeground {
+  url: string
+  file: File
+}
+
+export interface AndroidProject {
+  background: AndroidBackground
+  foreground: AndroidForeground | null
+  monochrome?: AndroidForeground | null
+}
+
+// View types
+type View =
+  | 'dashboard'
+  | 'workflow-selection'
+  | 'upload'
+  | 'android-upload'
+  | 'mode-selection'
+  | 'auto-editor'
+  | 'manual-editor'
+  | 'android-editor'
+  | 'completion'
+  | 'android-completion'
 
 function App() {
   const [view, setView] = useState<View>('dashboard')
+  const [_workflowMode, setWorkflowMode] = useState<WorkflowMode | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [resultImage, setResultImage] = useState<string | null>(null)
 
+  // Android-specific state
+  const [androidProject, setAndroidProject] = useState<AndroidProject | null>(null)
+  const [androidResultImages, setAndroidResultImages] = useState<{
+    background: string
+    foreground: string
+    composite: string
+  } | null>(null)
+
+  // Standard mode handlers
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile)
     setView('mode-selection')
   }
 
   const handleModeSelect = (mode: 'auto' | 'manual') => {
-    console.log('Mode selected:', mode)
     if (mode === 'auto') {
       setView('auto-editor')
     } else if (mode === 'manual') {
@@ -32,25 +77,67 @@ function App() {
     setView('completion')
   }
 
-  // Temporary use to suppress unused warning
-  console.log('Current file:', file);
+  // Workflow selection handler
+  const handleWorkflowSelect = (mode: WorkflowMode) => {
+    setWorkflowMode(mode)
+    if (mode === 'standard') {
+      setView('upload')
+    } else {
+      setView('android-upload')
+    }
+  }
+
+  // Android mode handlers
+  const handleAndroidProjectUpdate = (file: File) => {
+    // Create default project with white background
+    const project: AndroidProject = {
+      background: { type: 'color', value: '#ffffff' },
+      foreground: { url: URL.createObjectURL(file), file },
+    }
+    setAndroidProject(project)
+    setView('android-editor')
+  }
+
+  const handleAndroidConfirm = (images: { background: string; foreground: string; composite: string }) => {
+    setAndroidResultImages(images)
+    setView('android-completion')
+  }
+
+  // Reset handlers
+  const resetToWorkflowSelection = () => {
+    setWorkflowMode(null)
+    setFile(null)
+    setAndroidProject(null)
+    setResultImage(null)
+    setAndroidResultImages(null)
+    setView('workflow-selection')
+  }
 
   return (
     <div className="min-h-screen w-full bg-black text-white">
-      {/* Container managed by children */}
       {view === 'dashboard' ? (
-        <Dashboard onOpenApp={() => setView('upload')} />
+        <Dashboard onOpenApp={() => setView('workflow-selection')} />
+      ) : view === 'workflow-selection' ? (
+        <WorkflowSelection
+          onBack={() => setView('dashboard')}
+          onSelectWorkflow={handleWorkflowSelect}
+        />
       ) : view === 'upload' ? (
         <UploadPage
-          onBack={() => setView('dashboard')}
+          onBack={resetToWorkflowSelection}
           onFileSelect={handleFileSelect}
+        />
+      ) : view === 'android-upload' ? (
+        <AndroidUploadPage
+          onBack={resetToWorkflowSelection}
+          onContinue={handleAndroidProjectUpdate}
         />
       ) : view === 'mode-selection' ? (
         file && (
           <ModeSelection
             file={file}
             onBack={() => {
-              setFile(null) // reset file when going back
+              setFile(null)
               setView('upload')
             }}
             onSelectMode={handleModeSelect}
@@ -70,6 +157,21 @@ function App() {
             file={file}
             onBack={() => setView('mode-selection')}
             onConfirm={handleConfirm}
+          />
+        )
+      ) : view === 'android-editor' ? (
+        androidProject && (
+          <AndroidEditor
+            project={androidProject}
+            onBack={() => setView('android-upload')}
+            onConfirm={handleAndroidConfirm}
+          />
+        )
+      ) : view === 'android-completion' ? (
+        androidResultImages && (
+          <AndroidCompletionScreen
+            images={androidResultImages}
+            onBack={() => setView('android-editor')}
           />
         )
       ) : (
