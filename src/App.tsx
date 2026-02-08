@@ -9,6 +9,7 @@ import { WorkflowSelection } from './components/WorkflowSelection'
 import { AndroidUploadPage } from './components/AndroidUploadPage'
 import { AndroidEditor } from './components/AndroidEditor'
 import { AndroidCompletionScreen } from './components/AndroidCompletionScreen'
+import { BackgroundRemoverApp } from './components/BackgroundRemoverApp'
 
 // Workflow mode types
 type WorkflowMode = 'standard' | 'android'
@@ -34,6 +35,7 @@ export interface AndroidProject {
 // View types
 type View =
   | 'dashboard'
+  | 'bg-remover'
   | 'workflow-selection'
   | 'upload'
   | 'android-upload'
@@ -116,7 +118,12 @@ function App() {
   return (
     <div className="min-h-screen w-full bg-black text-white">
       {view === 'dashboard' ? (
-        <Dashboard onOpenApp={() => setView('workflow-selection')} />
+        <Dashboard
+          onOpenApp={() => setView('workflow-selection')}
+          onOpenBgRemover={() => setView('bg-remover')}
+        />
+      ) : view === 'bg-remover' ? (
+        <BackgroundRemoverApp onExit={() => setView('dashboard')} />
       ) : view === 'workflow-selection' ? (
         <WorkflowSelection
           onBack={() => setView('dashboard')}
