@@ -38,7 +38,13 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
     const [bgColor, setBgColor] = useState(
         project.background.type === 'color' ? project.background.value : '#6366f1'
     );
-    const [bgGradient, setBgGradient] = useState({
+    const [bgGradient, setBgGradient] = useState<{
+        type: 'linear' | 'radial' | 'reflected';
+        start: string;
+        end: string;
+        angle: number;
+    }>({
+        type: 'linear',
         start: '#6366f1',
         end: '#a855f7',
         angle: 135
@@ -59,19 +65,39 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
 
     // Helper: Create Gradient
     const createGradient = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
-        const radian = (bgGradient.angle * Math.PI) / 180;
-        const cx = width / 2;
-        const cy = height / 2;
-        const halfLen = Math.sqrt(width * width + height * height) / 2;
+        const { type, start, end, angle } = bgGradient;
+        let grad: CanvasGradient;
 
-        const x1 = cx - Math.cos(radian) * halfLen;
-        const y1 = cy - Math.sin(radian) * halfLen;
-        const x2 = cx + Math.cos(radian) * halfLen;
-        const y2 = cy + Math.sin(radian) * halfLen;
+        if (type === 'radial') {
+            const cx = width / 2;
+            const cy = height / 2;
+            const radius = Math.max(width, height) / 2;
+            grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+            grad.addColorStop(0, start);
+            grad.addColorStop(1, end);
+        } else {
+            // Linear or Reflected
+            const radian = (angle * Math.PI) / 180;
+            const cx = width / 2;
+            const cy = height / 2;
+            const halfLen = Math.sqrt(width * width + height * height) / 2;
 
-        const grad = ctx.createLinearGradient(x1, y1, x2, y2);
-        grad.addColorStop(0, bgGradient.start);
-        grad.addColorStop(1, bgGradient.end);
+            const x1 = cx - Math.cos(radian) * halfLen;
+            const y1 = cy - Math.sin(radian) * halfLen;
+            const x2 = cx + Math.cos(radian) * halfLen;
+            const y2 = cy + Math.sin(radian) * halfLen;
+
+            grad = ctx.createLinearGradient(x1, y1, x2, y2);
+
+            if (type === 'reflected') {
+                grad.addColorStop(0, start);
+                grad.addColorStop(0.5, end);
+                grad.addColorStop(1, start);
+            } else {
+                grad.addColorStop(0, start);
+                grad.addColorStop(1, end);
+            }
+        }
         return grad;
     };
 
@@ -455,7 +481,7 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
 
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
                 {/* ... Preview Area ... */}
-                <main className="flex-1 flex items-center justify-center relative bg-background-dark px-4 py-8 md:px-0">
+                <main className="flex-none h-[45vh] w-full md:flex-1 md:h-full md:w-auto flex items-center justify-center relative bg-background-dark px-4 py-8 md:px-0 order-1">
                     <div className="relative w-full max-w-[300px] md:max-w-[400px] aspect-square">
                         <div className="absolute inset-0 bg-[#3ddc84]/20 blur-[80px] rounded-full scale-100 opacity-50"></div>
                         <div className="relative w-full h-full overflow-hidden shadow-2xl border-[1px] border-white/20 transition-all duration-500 ease-out" style={{ borderRadius: `${borderRadius}%` }}>
@@ -470,7 +496,7 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
                     </div>
                 </main>
 
-                <aside className="flex-none bg-[#1c1c1f] flex flex-col gap-6 p-6 z-40 border-t border-white/5 shadow-2xl md:w-96 md:h-full md:border-l md:border-t-0 md:justify-start md:overflow-y-auto">
+                <aside className="flex-1 overflow-y-auto w-full bg-[#1c1c1f] flex flex-col gap-6 p-6 z-40 border-t border-white/5 shadow-2xl md:flex-none md:w-96 md:h-full md:border-l md:border-t-0 md:justify-start md:overflow-y-auto order-2">
 
                     {/* --- BACKGROUND SECTION --- */}
                     <div className="w-full flex flex-col gap-4">
@@ -549,6 +575,28 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
 
                         {bgType === 'gradient' && (
                             <div className="space-y-4">
+                                {/* Gradient Type Selection */}
+                                <div className="flex gap-2 p-1 bg-black/20 rounded-lg">
+                                    <button
+                                        onClick={() => setBgGradient(prev => ({ ...prev, type: 'linear' }))}
+                                        className={`flex-1 py-1 text-[10px] font-medium rounded-md transition-all ${bgGradient.type === 'linear' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+                                    >
+                                        Linear
+                                    </button>
+                                    <button
+                                        onClick={() => setBgGradient(prev => ({ ...prev, type: 'radial' }))}
+                                        className={`flex-1 py-1 text-[10px] font-medium rounded-md transition-all ${bgGradient.type === 'radial' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+                                    >
+                                        Radial
+                                    </button>
+                                    <button
+                                        onClick={() => setBgGradient(prev => ({ ...prev, type: 'reflected' }))}
+                                        className={`flex-1 py-1 text-[10px] font-medium rounded-md transition-all ${bgGradient.type === 'reflected' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/60'}`}
+                                    >
+                                        Spiegeln
+                                    </button>
+                                </div>
+
                                 {/* Gradient Colors */}
                                 <div className="flex gap-4">
                                     <div className="flex-1 space-y-1">
@@ -593,20 +641,22 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
                                     </div>
                                 </div>
 
-                                {/* Angle Slider */}
-                                <div>
-                                    <div className="flex justify-between text-[10px] text-white/50 mb-2">
-                                        <span>Winkel</span>
-                                        <span>{bgGradient.angle}°</span>
+                                {/* Angle Slider (Only for Linear/Reflected) */}
+                                {bgGradient.type !== 'radial' && (
+                                    <div>
+                                        <div className="flex justify-between text-[10px] text-white/50 mb-2">
+                                            <span>Winkel</span>
+                                            <span>{bgGradient.angle}°</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="0" max="360"
+                                            value={bgGradient.angle}
+                                            onChange={e => setBgGradient(prev => ({ ...prev, angle: parseInt(e.target.value) }))}
+                                            className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
+                                        />
                                     </div>
-                                    <input
-                                        type="range"
-                                        min="0" max="360"
-                                        value={bgGradient.angle}
-                                        onChange={e => setBgGradient(prev => ({ ...prev, angle: parseInt(e.target.value) }))}
-                                        className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
-                                    />
-                                </div>
+                                )}
                             </div>
                         )}
 
