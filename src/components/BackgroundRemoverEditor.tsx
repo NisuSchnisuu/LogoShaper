@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { removeBackground } from '@imgly/background-removal';
-import { processMagicEraser, getPixelColor } from '../utils/imageProcessing';
-import type { EraserLayer, ProcessingParams } from '../utils/imageProcessing';
+import { processMagicEraser } from '../utils/imageProcessing';
+import type { EraserLayer } from '../utils/imageProcessing';
 
 interface BackgroundRemoverEditorProps {
     file: File;
@@ -32,7 +32,7 @@ export const BackgroundRemoverEditor: React.FC<BackgroundRemoverEditorProps> = (
         const loadCanvas = async () => {
             if (!canvasRef.current) return;
             const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
             if (!ctx) return;
 
             const img = new Image();
@@ -162,8 +162,8 @@ export const BackgroundRemoverEditor: React.FC<BackgroundRemoverEditorProps> = (
             await new Promise((resolve) => { img.onload = resolve; });
 
             if (canvasRef.current) {
-                const canvas = canvas.current;
-                const ctx = canvas.getContext('2d');
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
                 if (ctx) {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     ctx.drawImage(img, 0, 0);
