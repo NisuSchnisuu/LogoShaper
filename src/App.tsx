@@ -123,7 +123,25 @@ function App() {
           onOpenBgRemover={() => setView('bg-remover')}
         />
       ) : view === 'bg-remover' ? (
-        <BackgroundRemoverApp onExit={() => setView('dashboard')} />
+        <BackgroundRemoverApp
+          onExit={() => setView('dashboard')}
+          onOpenAndroidEditor={(imgSrc) => {
+            // Convert Data URL to File
+            fetch(imgSrc)
+              .then(res => res.blob())
+              .then(blob => {
+                const file = new File([blob], "processed_logo.png", { type: "image/png" });
+
+                // Create Android Project
+                const project: AndroidProject = {
+                  background: { type: 'color', value: '#ffffff' },
+                  foreground: { url: imgSrc, file: file },
+                };
+                setAndroidProject(project);
+                setView('android-editor');
+              });
+          }}
+        />
       ) : view === 'workflow-selection' ? (
         <WorkflowSelection
           onBack={() => setView('dashboard')}

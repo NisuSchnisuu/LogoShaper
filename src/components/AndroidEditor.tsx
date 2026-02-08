@@ -34,10 +34,15 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
     const [showSafeZone, setShowSafeZone] = useState(true);
 
     // Background State
-    const [bgType, setBgType] = useState<'color' | 'image'>(project.background.type);
+    const [bgType, setBgType] = useState<'color' | 'image' | 'gradient'>(project.background.type as any); // Cast for now if App.tsx not updated
     const [bgColor, setBgColor] = useState(
         project.background.type === 'color' ? project.background.value : '#6366f1'
     );
+    const [bgGradient, setBgGradient] = useState({
+        start: '#6366f1',
+        end: '#a855f7',
+        angle: 135
+    });
     const [bgImageUrl, setBgImageUrl] = useState<string | null>(
         project.background.type === 'image' ? project.background.value : null
     );
@@ -51,6 +56,24 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
     // Loaded Image Objects (for Canvas)
     const [bgImageObj, setBgImageObj] = useState<HTMLImageElement | null>(null);
     const [fgImageObj, setFgImageObj] = useState<HTMLImageElement | null>(null);
+
+    // Helper: Create Gradient
+    const createGradient = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+        const radian = (bgGradient.angle * Math.PI) / 180;
+        const cx = width / 2;
+        const cy = height / 2;
+        const halfLen = Math.sqrt(width * width + height * height) / 2;
+
+        const x1 = cx - Math.cos(radian) * halfLen;
+        const y1 = cy - Math.sin(radian) * halfLen;
+        const x2 = cx + Math.cos(radian) * halfLen;
+        const y2 = cy + Math.sin(radian) * halfLen;
+
+        const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+        grad.addColorStop(0, bgGradient.start);
+        grad.addColorStop(1, bgGradient.end);
+        return grad;
+    };
 
     // Load Background Image when URL changes
     useEffect(() => {
@@ -244,7 +267,6 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
         ctx.clearRect(0, 0, size, size);
 
         // Apply Corner Radius Clip
-        // We clip the entire content to the rounded shape
         ctx.save();
         if (borderRadius > 0) {
             const r = size * (borderRadius / 100);
@@ -255,7 +277,7 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
         // Draw background
         if (bgType === 'color') {
             if (bgColor === 'transparent') {
-                // Draw checkerboard pattern
+                // Draw checkerboard
                 const gridSize = 20;
                 for (let x = 0; x < size; x += gridSize) {
                     for (let y = 0; y < size; y += gridSize) {
@@ -267,17 +289,14 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
                 ctx.fillStyle = bgColor;
                 ctx.fillRect(0, 0, size, size);
             }
+        } else if (bgType === 'gradient') {
+            ctx.fillStyle = createGradient(ctx, size, size);
+            ctx.fillRect(0, 0, size, size);
         } else if (bgImageObj) {
             ctx.drawImage(bgImageObj, 0, 0, size, size);
         }
 
-        // Restore context (remove clip) before drawing foreground?
-        // NO: If user wants rounded icon, Foreground must also be stuck inside.
-        // Usually Legacy Icons clip everything.
-        // However, standard Adaptive Icons have foreground float.
-        // If we clip here, the preview shows the "Legacy Output" shape. This matches the request.
-
-        // Draw foreground
+        // ... (Foreground drawing)
         if (fgImageObj) {
             const scaleFactor = scale / 100;
             const fgSize = size * scaleFactor;
@@ -287,24 +306,47 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
 
         ctx.restore();
 
-        // Draw Safe Zone overlay if enabled (OUTSIDE clip, so it's always visible)
+        // Safe Zone
+        // ... (existing safe zone code)
         if (showSafeZone) {
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-            ctx.lineWidth = 2;
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = size * 0.33;
+
+            // Draw outer glow/shadow for contrast
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+            ctx.shadowBlur = 4;
+
+            // Draw solid black line first for contrast
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.lineWidth = 3;
             ctx.setLineDash([8, 6]);
             ctx.beginPath();
-            // 66% diameter = 33% radius
-            ctx.arc(size / 2, size / 2, size * 0.33, 0, Math.PI * 2);
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
             ctx.stroke();
-            ctx.setLineDash([]);
 
-            // Safe zone label
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            // Draw white dashed line on top
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.lineWidth = 2;
+            // ctx.setLineDash([8, 6]); // Already set
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.setLineDash([]);
+            ctx.shadowBlur = 0; // Reset shadow
+
+            // Text with shadow
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.shadowColor = 'rgba(0,0,0,0.8)';
+            ctx.shadowBlur = 4;
             ctx.font = `${Math.round(size * 0.025)}px Inter, sans-serif`;
             ctx.textAlign = 'center';
-            ctx.fillText('Safe Zone (66%)', size / 2, size * 0.12);
+            ctx.fillText('Safe Zone (66%)', centerX, size * 0.12);
+            ctx.shadowBlur = 0;
         }
-    }, [bgType, bgColor, bgImageObj, fgImageObj, scale, borderRadius, showSafeZone]);
+
+    }, [bgType, bgColor, bgGradient, bgImageObj, fgImageObj, scale, borderRadius, showSafeZone]);
 
     // Redraw on state changes
     useEffect(() => {
@@ -312,23 +354,20 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
     }, [drawPreview]);
 
 
-    // Handle Final Export
+    // Handle Final Export (Update for Gradient)
     const handleExport = () => {
         const exportSize = 1080;
-
-        // Create background canvas
+        // ... (create canvases)
         const bgCanvas = document.createElement('canvas');
         bgCanvas.width = exportSize;
         bgCanvas.height = exportSize;
         const bgCtx = bgCanvas.getContext('2d');
 
-        // Create foreground canvas
         const fgCanvas = document.createElement('canvas');
         fgCanvas.width = exportSize;
         fgCanvas.height = exportSize;
         const fgCtx = fgCanvas.getContext('2d');
 
-        // Create composite canvas
         const compCanvas = document.createElement('canvas');
         compCanvas.width = exportSize;
         compCanvas.height = exportSize;
@@ -336,27 +375,20 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
 
         if (!bgCtx || !fgCtx || !compCtx) return;
 
-        // --- Render Background Layer (No Clipping usually for Adaptive, but user might want it?)
-        // Standard Android: Layer 0 should be full square.
-        // We will Apply Clipping ONLY to Composite logic generally, BUT:
-        // If user set borderRadius, they likely want the "Background Layer" file to be square (for XML usage)
-        // AND the "Composite" file to be rounded.
-        // However, if the user requested "Legacy Icon" rounding, they mean the visual output.
-        // Let's render Background Layer as SQUARE (Full Bleed).
-        // Let's render Foreground Layer as Image.
-        // Let's render Composite Layer as ROUNDED.
-
-        // 1. Render Background (Square)
+        // 1. Render Background
         if (bgType === 'color') {
             if (bgColor !== 'transparent') {
                 bgCtx.fillStyle = bgColor;
                 bgCtx.fillRect(0, 0, exportSize, exportSize);
             }
+        } else if (bgType === 'gradient') {
+            bgCtx.fillStyle = createGradient(bgCtx, exportSize, exportSize);
+            bgCtx.fillRect(0, 0, exportSize, exportSize);
         } else if (bgImageObj) {
             bgCtx.drawImage(bgImageObj, 0, 0, exportSize, exportSize);
         }
 
-        // 2. Render Foreground (Transparent Background, Centered)
+        // ... (Render Foreground)
         if (fgImageObj) {
             const scaleFactor = scale / 100;
             const fgSize = exportSize * scaleFactor;
@@ -364,7 +396,7 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
             fgCtx.drawImage(fgImageObj, offset, offset, fgSize, fgSize);
         }
 
-        // 3. Render Composite (Rounded if requested)
+        // 3. Render Composite
         compCtx.save();
         if (borderRadius > 0) {
             const r = exportSize * (borderRadius / 100);
@@ -378,6 +410,9 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
                 compCtx.fillStyle = bgColor;
                 compCtx.fillRect(0, 0, exportSize, exportSize);
             }
+        } else if (bgType === 'gradient') {
+            compCtx.fillStyle = createGradient(compCtx, exportSize, exportSize);
+            compCtx.fillRect(0, 0, exportSize, exportSize);
         } else if (bgImageObj) {
             compCtx.drawImage(bgImageObj, 0, 0, exportSize, exportSize);
         }
@@ -391,8 +426,6 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
         }
         compCtx.restore();
 
-
-        // Export as data URLs
         const backgroundDataUrl = bgCanvas.toDataURL('image/png');
         const foregroundDataUrl = fgCanvas.toDataURL('image/png');
         const compositeDataUrl = compCanvas.toDataURL('image/png');
@@ -406,7 +439,7 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
 
     return (
         <div className="relative flex h-full min-h-screen w-full flex-col overflow-hidden bg-background-dark font-display md:max-w-7xl md:mx-auto">
-            {/* Header */}
+            {/* ... Header ... */}
             <header className="flex-none flex items-center justify-between px-6 py-4 z-50 bg-background-dark/90 backdrop-blur-xl border-b border-white/5">
                 <button
                     onClick={onBack}
@@ -421,17 +454,11 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
             </header>
 
             <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-
-                {/* Canvas Area */}
+                {/* ... Preview Area ... */}
                 <main className="flex-1 flex items-center justify-center relative bg-background-dark px-4 py-8 md:px-0">
-                    {/* Preview Area */}
                     <div className="relative w-full max-w-[300px] md:max-w-[400px] aspect-square">
-                        {/* Background Glow */}
                         <div className="absolute inset-0 bg-[#3ddc84]/20 blur-[80px] rounded-full scale-100 opacity-50"></div>
-
-                        {/* Canvas Container */}
                         <div className="relative w-full h-full overflow-hidden shadow-2xl border-[1px] border-white/20 transition-all duration-500 ease-out" style={{ borderRadius: `${borderRadius}%` }}>
-                            {/* We also apply CSS border-radius to container for smooth UI feedback, though canvas clips internally too */}
                             <canvas
                                 ref={previewCanvasRef}
                                 width={400}
@@ -439,18 +466,10 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
                                 className="w-full h-full"
                             />
                         </div>
-
-                        {/* Layer Indicator */}
-                        <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2">
-                            <div className="flex items-center gap-1.5 bg-surface-dark/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/10">
-                                <span className="material-symbols-outlined text-[14px] text-white/50">layers</span>
-                                <span className="text-[11px] text-white/50">2 Layers</span>
-                            </div>
-                        </div>
+                        {/* ... */}
                     </div>
                 </main>
 
-                {/* Sidebar Controls */}
                 <aside className="flex-none bg-[#1c1c1f] flex flex-col gap-6 p-6 z-40 border-t border-white/5 shadow-2xl md:w-96 md:h-full md:border-l md:border-t-0 md:justify-start md:overflow-y-auto">
 
                     {/* --- BACKGROUND SECTION --- */}
@@ -461,25 +480,27 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setBgType('color')}
-                                className={`flex-1 h-9 rounded-lg text-xs font-medium transition-all ${bgType === 'color'
-                                    ? 'bg-primary text-white'
-                                    : 'bg-[#25252b] text-white/50 hover:bg-white/5'
-                                    }`}
+                                className={`flex-1 h-9 rounded-lg text-xs font-medium transition-all ${bgType === 'color' ? 'bg-primary text-white' : 'bg-[#25252b] text-white/50 hover:bg-white/5'}`}
                             >
                                 Farbe
                             </button>
                             <button
+                                onClick={() => setBgType('gradient')}
+                                className={`flex-1 h-9 rounded-lg text-xs font-medium transition-all ${bgType === 'gradient' ? 'bg-primary text-white' : 'bg-[#25252b] text-white/50 hover:bg-white/5'}`}
+                            >
+                                Verlauf
+                            </button>
+                            <button
                                 onClick={() => setBgType('image')}
-                                className={`flex-1 h-9 rounded-lg text-xs font-medium transition-all ${bgType === 'image'
-                                    ? 'bg-primary text-white'
-                                    : 'bg-[#25252b] text-white/50 hover:bg-white/5'
-                                    }`}
+                                className={`flex-1 h-9 rounded-lg text-xs font-medium transition-all ${bgType === 'image' ? 'bg-primary text-white' : 'bg-[#25252b] text-white/50 hover:bg-white/5'}`}
                             >
                                 Bild
                             </button>
                         </div>
 
-                        {bgType === 'color' ? (
+                        {/* Controls based on Type */}
+                        {bgType === 'color' && (
+                            /* ... existing color controls ... */
                             <div className="space-y-3">
                                 <div className="flex items-center gap-3">
                                     <div
@@ -514,10 +535,7 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
                                         <button
                                             key={color}
                                             onClick={() => setBgColor(color)}
-                                            className={`w-6 h-6 rounded border-2 transition-all relative overflow-hidden ${bgColor.toLowerCase() === color.toLowerCase()
-                                                ? 'border-white scale-110'
-                                                : 'border-transparent hover:border-white/30'
-                                                }`}
+                                            className={`w-6 h-6 rounded border-2 transition-all relative overflow-hidden ${bgColor.toLowerCase() === color.toLowerCase() ? 'border-white scale-110' : 'border-transparent hover:border-white/30'}`}
                                             style={{ backgroundColor: color === 'transparent' ? 'transparent' : color }}
                                         >
                                             {color === 'transparent' && (
@@ -527,7 +545,73 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
                                     ))}
                                 </div>
                             </div>
-                        ) : (
+                        )}
+
+                        {bgType === 'gradient' && (
+                            <div className="space-y-4">
+                                {/* Gradient Colors */}
+                                <div className="flex gap-4">
+                                    <div className="flex-1 space-y-1">
+                                        <label className="text-[10px] text-white/50">Start</label>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded border border-white/10 relative overflow-hidden">
+                                                <input
+                                                    type="color"
+                                                    value={bgGradient.start}
+                                                    onChange={e => setBgGradient(prev => ({ ...prev, start: e.target.value }))}
+                                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                                />
+                                                <div className="w-full h-full" style={{ backgroundColor: bgGradient.start }}></div>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={bgGradient.start}
+                                                onChange={e => setBgGradient(prev => ({ ...prev, start: e.target.value }))}
+                                                className="w-full bg-transparent text-[10px] font-mono text-white/80 focus:text-white"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 space-y-1">
+                                        <label className="text-[10px] text-white/50">Ende</label>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded border border-white/10 relative overflow-hidden">
+                                                <input
+                                                    type="color"
+                                                    value={bgGradient.end}
+                                                    onChange={e => setBgGradient(prev => ({ ...prev, end: e.target.value }))}
+                                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                                />
+                                                <div className="w-full h-full" style={{ backgroundColor: bgGradient.end }}></div>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={bgGradient.end}
+                                                onChange={e => setBgGradient(prev => ({ ...prev, end: e.target.value }))}
+                                                className="w-full bg-transparent text-[10px] font-mono text-white/80 focus:text-white"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Angle Slider */}
+                                <div>
+                                    <div className="flex justify-between text-[10px] text-white/50 mb-2">
+                                        <span>Winkel</span>
+                                        <span>{bgGradient.angle}°</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="0" max="360"
+                                        value={bgGradient.angle}
+                                        onChange={e => setBgGradient(prev => ({ ...prev, angle: parseInt(e.target.value) }))}
+                                        className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {bgType === 'image' && (
+                            /* ... existing image upload ... */
                             <div>
                                 {bgImageUrl ? (
                                     <div className="relative">
@@ -568,7 +652,7 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
                                 <span className="text-[#3ddc84] text-xs font-mono font-bold">{borderRadius}%</span>
                             </div>
 
-                            <div className="relative flex h-6 w-full items-center cursor-pointer group">
+                            <div className="relative h-6 w-full cursor-pointer group">
                                 <input
                                     type="range"
                                     min="0"
@@ -577,14 +661,14 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
                                     onChange={(e) => setBorderRadius(Number(e.target.value))}
                                     className="absolute w-full h-full opacity-0 z-10 cursor-pointer"
                                 />
-                                <div className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden relative">
+                                <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-1.5 rounded-full bg-white/10 overflow-hidden">
                                     <div
                                         className="h-full bg-[#3ddc84] rounded-full absolute top-0 left-0"
                                         style={{ width: `${(borderRadius / 50) * 100}%` }}
                                     ></div>
                                 </div>
                                 <div
-                                    className="absolute top-1/2 -translate-y-1/2 size-5 bg-white rounded-full shadow border-4 border-background-dark pointer-events-none transition-transform"
+                                    className="absolute top-1/2 size-5 bg-white rounded-full shadow border-4 border-background-dark pointer-events-none transition-transform"
                                     style={{ left: `${(borderRadius / 50) * 100}%`, transform: 'translate(-50%, -50%)' }}
                                 ></div>
                             </div>
@@ -619,7 +703,7 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
                                 <span className="text-[#3ddc84] text-xs font-mono font-bold">{scale}%</span>
                             </div>
 
-                            <div className="relative flex h-6 w-full items-center cursor-pointer group">
+                            <div className="relative h-6 w-full cursor-pointer group">
                                 <input
                                     type="range"
                                     min="60"
@@ -628,14 +712,14 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
                                     onChange={(e) => setScale(Number(e.target.value))}
                                     className="absolute w-full h-full opacity-0 z-10 cursor-pointer"
                                 />
-                                <div className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden relative">
+                                <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-1.5 rounded-full bg-white/10 overflow-hidden">
                                     <div
                                         className="h-full bg-[#3ddc84] rounded-full absolute top-0 left-0"
                                         style={{ width: `${((scale - 60) / 80) * 100}%` }}
                                     ></div>
                                 </div>
                                 <div
-                                    className="absolute top-1/2 -translate-y-1/2 size-5 bg-white rounded-full shadow border-4 border-background-dark pointer-events-none transition-transform"
+                                    className="absolute top-1/2 size-5 bg-white rounded-full shadow border-4 border-background-dark pointer-events-none transition-transform"
                                     style={{ left: `${((scale - 60) / 80) * 100}%`, transform: 'translate(-50%, -50%)' }}
                                 ></div>
                             </div>

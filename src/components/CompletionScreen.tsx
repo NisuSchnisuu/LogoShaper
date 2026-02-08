@@ -5,9 +5,10 @@ import { saveAs } from 'file-saver';
 interface CompletionScreenProps {
     imageSrc: string;
     onBack: () => void;
+    onOpenAndroidEditor?: (imgSrc: string) => void;
 }
 
-export const CompletionScreen: React.FC<CompletionScreenProps> = ({ imageSrc, onBack }) => {
+export const CompletionScreen: React.FC<CompletionScreenProps> = ({ imageSrc, onBack, onOpenAndroidEditor }) => {
     const [fileName, setFileName] = useState('logo');
     const [compressionQuality, setCompressionQuality] = useState(0.8); // 0 to 1
     const [estimatedSize, setEstimatedSize] = useState<string>('0 KB');
@@ -155,8 +156,8 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({ imageSrc, on
                                     key={f}
                                     onClick={() => setFormat(f)}
                                     className={`h-10 rounded-lg text-xs font-bold uppercase transition-all border ${format === f
-                                            ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(99,102,241,0.2)]'
-                                            : 'bg-[#1c1c1f] border-white/5 text-gray-400 hover:bg-white/5'
+                                        ? 'bg-primary/20 border-primary text-primary shadow-[0_0_10px_rgba(99,102,241,0.2)]'
+                                        : 'bg-[#1c1c1f] border-white/5 text-gray-400 hover:bg-white/5'
                                         }`}
                                 >
                                     {f.split('/')[1]}
@@ -207,9 +208,18 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({ imageSrc, on
                             onClick={handleDownloadAppSet}
                             className="w-full flex items-center justify-center gap-3 h-14 rounded-2xl bg-[#1c1c1f] text-white border border-white/10 text-sm font-bold uppercase tracking-widest hover:bg-white/5 transition-colors cursor-pointer"
                         >
-                            <span className="material-symbols-outlined">layers</span>
                             <span>Download App-Set</span>
                         </button>
+
+                        {onOpenAndroidEditor && (
+                            <button
+                                onClick={() => onOpenAndroidEditor(imageSrc)}
+                                className="w-full flex items-center justify-center gap-3 h-14 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-bold uppercase tracking-widest shadow-lg hover:shadow-indigo-500/20 active:scale-[0.98] transition-all cursor-pointer"
+                            >
+                                <span className="material-symbols-outlined">android</span>
+                                <span>In Adaptive Editor öffnen</span>
+                            </button>
+                        )}
                     </div>
                 </aside>
             </div>

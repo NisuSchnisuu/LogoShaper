@@ -5,11 +5,12 @@ import { CompletionScreen } from './CompletionScreen';
 
 interface BackgroundRemoverAppProps {
     onExit: () => void;
+    onOpenAndroidEditor?: (imgSrc: string) => void;
 }
 
 type AppStep = 'upload' | 'editor' | 'completion';
 
-export const BackgroundRemoverApp: React.FC<BackgroundRemoverAppProps> = ({ onExit }) => {
+export const BackgroundRemoverApp: React.FC<BackgroundRemoverAppProps> = ({ onExit, onOpenAndroidEditor }) => {
     const [step, setStep] = useState<AppStep>('upload');
     const [file, setFile] = useState<File | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
@@ -49,6 +50,7 @@ export const BackgroundRemoverApp: React.FC<BackgroundRemoverAppProps> = ({ onEx
                         setStep('editor');
                         setResultImage(null);
                     }}
+                    onOpenAndroidEditor={onOpenAndroidEditor}
                 />
             ) : null}
         </div>
