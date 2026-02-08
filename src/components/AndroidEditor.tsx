@@ -98,7 +98,7 @@ export const AndroidEditor: React.FC<AndroidEditorProps> = ({ project, onBack, o
 
             await new Promise<void>((resolve, reject) => {
                 img.onload = () => resolve();
-                img.onerror = (e) => reject(new Error(`Failed to load image`));
+                img.onerror = () => reject(new Error(`Failed to load image`));
                 img.src = fgImageUrl;
             });
 
